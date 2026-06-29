@@ -14,11 +14,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Environment variables
 UPLOAD_URL = os.environ.get('UPLOAD_URL', '')          # 节点或订阅上传地址,只填写这个地址将上传节点,同时填写PROJECT_URL将上传订阅，例如：https://merge.serv00.net
-PROJECT_URL = os.environ.get('PROJECT_URL', '')        # 项目url,需要自动保活或自动上传订阅需要填写,例如：https://www.google.com,
+PROJECT_URL = os.environ.get('PROJECT_URL', '')        # 项目url,需要自动保活或自动上传订阅需要填写,例如：https://www.google.com
 AUTO_ACCESS = os.environ.get('AUTO_ACCESS', 'false').lower() == 'true'  # false关闭自动保活, true开启自动保活，默认关闭
 FILE_PATH = os.environ.get('FILE_PATH', '.cache')      # 运行路径,sub.txt保存路径
 SUB_PATH = os.environ.get('SUB_PATH', 'sub')           # 订阅token,默认sub，例如：https://www.google.com/sub
-UUID = os.environ.get('UUID', '20e6e496-cf19-45c8-b883-14f5e11cd9f1')  # UUID,如使用哪吒v1,在不同的平台部署需要修改,否则会覆盖
+UUID = os.environ.get('UUID', '9bfd203a-458b-4fb7-9841-a3fffe42016c')  # UUID,如使用哪吒v1,在不同的平台部署需要修改,否则会覆盖
 NEZHA_SERVER = os.environ.get('NEZHA_SERVER', '')      # 哪吒面板域名或ip, v1格式: nezha.xxx.com:8008, v0格式: nezha.xxx.com
 NEZHA_PORT = os.environ.get('NEZHA_PORT', '')          # v1哪吒请留空, v0哪吒的agent通信端口,自动匹配tls
 NEZHA_KEY = os.environ.get('NEZHA_KEY', '')            # v1哪吒的NZ_CLIENT_SECRET或v0哪吒agent密钥
@@ -27,7 +27,7 @@ ARGO_AUTH = os.environ.get('ARGO_AUTH', '')            # Argo固定隧道密钥,
 ARGO_PORT = int(os.environ.get('ARGO_PORT', '8001'))   # Argo端口,使用固定隧道token需在cloudflare后台设置端口和这里一致
 CFIP = os.environ.get('CFIP', 'spring.io')             # 优选ip或优选域名
 CFPORT = int(os.environ.get('CFPORT', '443'))          # 优选ip或优选域名对应端口
-NAME = os.environ.get('NAME', '')                      # 节点名称
+NAME = os.environ.get('NAME', 'lunes.host')                      # 节点名称
 CHAT_ID = os.environ.get('CHAT_ID', '')                # Telegram chat_id,推送节点到tg,两个变量同时填写才会推送
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '')            # Telegram bot_token
 PORT = int(os.environ.get('SERVER_PORT') or os.environ.get('PORT') or 3000) # 订阅端口，如无法订阅，请手动修改为分配的端口
@@ -61,7 +61,7 @@ def delete_nodes():
             return
 
         try:
-            with open(sub_path, 'r') as file:
+            with open(sub_path, 'r', encoding='utf-8') as file:
                 file_content = file.read()
         except:
             return None
@@ -75,7 +75,8 @@ def delete_nodes():
         try:
             requests.post(f"{UPLOAD_URL}/api/delete-nodes", 
                           data=json.dumps({"nodes": nodes}),
-                          headers={"Content-Type": "application/json"})
+                          headers={"Content-Type": "application/json"},
+                          timeout=10)
         except:
             return None
     except Exception as e:
@@ -134,7 +135,7 @@ def get_system_architecture():
 def download_file(file_name, file_url):
     file_path = os.path.join(FILE_PATH, file_name)
     try:
-        response = requests.get(file_url, stream=True)
+        response = requests.get(file_url, stream=True, timeout=30)
         response.raise_for_status()
         
         with open(file_path, 'wb') as f:
@@ -190,7 +191,7 @@ def argo_type():
         return
 
     if "TunnelSecret" in ARGO_AUTH:
-        with open(os.path.join(FILE_PATH, 'tunnel.json'), 'w') as f:
+        with open(os.path.join(FILE_PATH, 'tunnel.json'), 'w', encoding='utf-8') as f:
             f.write(ARGO_AUTH)
         
         tunnel_id = ARGO_AUTH.split('"')[11]
@@ -206,7 +207,7 @@ ingress:
       noTLSVerify: true
   - service: http_status:404
 """
-        with open(os.path.join(FILE_PATH, 'tunnel.yml'), 'w') as f:
+        with open(os.path.join(FILE_PATH, 'tunnel.yml'), 'w', encoding='utf-8') as f:
             f.write(tunnel_yml)
     else:
         print("Use token connect to tunnel,please set the {ARGO_PORT} in cloudflare")
@@ -284,11 +285,11 @@ use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: {UUID}"""
             
-            with open(os.path.join(FILE_PATH, 'config.yaml'), 'w') as f:
+            with open(os.path.join(FILE_PATH, 'config.yaml'), 'w', encoding='utf-8') as f:
                 f.write(config_yaml)
     
     # Generate configuration file
-    config ={"log":{"access":"/dev/null","error":"/dev/null","loglevel":"none",},"inbounds":[{"port":ARGO_PORT ,"protocol":"vless","settings":{"clients":[{"id":UUID ,"flow":"xtls-rprx-vision",},],"decryption":"none","fallbacks":[{"dest":3001 },{"path":"/vless-argo","dest":3002 },{"path":"/vmess-argo","dest":3003 },{"path":"/trojan-argo","dest":3004 },],},"streamSettings":{"network":"tcp",},},{"port":3001 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID },],"decryption":"none"},"streamSettings":{"network":"ws","security":"none"}},{"port":3002 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID ,"level":0 }],"decryption":"none"},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/vless-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3003 ,"listen":"127.0.0.1","protocol":"vmess","settings":{"clients":[{"id":UUID ,"alterId":0 }]},"streamSettings":{"network":"ws","wsSettings":{"path":"/vmess-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3004 ,"listen":"127.0.0.1","protocol":"trojan","settings":{"clients":[{"password":UUID },]},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/trojan-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},],"outbounds":[{"protocol":"freedom","tag": "direct" },{"protocol":"blackhole","tag":"block"}]}
+    config = {"log":{"access":"/dev/null","error":"/dev/null","loglevel":"none",},"inbounds":[{"port":ARGO_PORT ,"protocol":"vless","settings":{"clients":[{"id":UUID ,"flow":"xtls-rprx-vision",},],"decryption":"none","fallbacks":[{"dest":3001 },{"path":"/vless-argo","dest":3002 },{"path":"/vmess-argo","dest":3003 },{"path":"/trojan-argo","dest":3004 },],},"streamSettings":{"network":"tcp",},},{"port":3001 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID },],"decryption":"none"},"streamSettings":{"network":"ws","security":"none"}},{"port":3002 ,"listen":"127.0.0.1","protocol":"vless","settings":{"clients":[{"id":UUID ,"level":0 }],"decryption":"none"},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/vless-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3003 ,"listen":"127.0.0.1","protocol":"vmess","settings":{"clients":[{"id":UUID ,"alterId":0 }]},"streamSettings":{"network":"ws","wsSettings":{"path":"/vmess-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},{"port":3004 ,"listen":"127.0.0.1","protocol":"trojan","settings":{"clients":[{"password":UUID },]},"streamSettings":{"network":"ws","security":"none","wsSettings":{"path":"/trojan-argo"}},"sniffing":{"enabled":True ,"destOverride":["http","tls","quic"],"metadataOnly":False }},],"outbounds":[{"protocol":"freedom","tag": "direct" },{"protocol":"blackhole","tag":"block"}]}
     with open(os.path.join(FILE_PATH, 'config.json'), 'w', encoding='utf-8') as config_file:
         json.dump(config, config_file, ensure_ascii=False, indent=2)
     
@@ -357,7 +358,7 @@ async def extract_domains():
         await generate_links(argo_domain)
     else:
         try:
-            with open(boot_log_path, 'r') as f:
+            with open(boot_log_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
             
             lines = file_content.split('\n')
@@ -405,9 +406,9 @@ def upload_nodes():
             response = requests.post(
                 f"{UPLOAD_URL}/api/add-subscriptions",
                 json=json_data,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=10
             )
-            
             if response.status_code == 200:
                 print('Subscription uploaded successfully')
         except Exception as e:
@@ -417,7 +418,7 @@ def upload_nodes():
         if not os.path.exists(list_path):
             return
         
-        with open(list_path, 'r') as f:
+        with open(list_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         nodes = [line for line in content.split('\n') if any(protocol in line for protocol in ['vless://', 'vmess://', 'trojan://', 'hysteria2://', 'tuic://'])]
@@ -431,9 +432,9 @@ def upload_nodes():
             response = requests.post(
                 f"{UPLOAD_URL}/api/add-nodes",
                 data=json_data,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=10
             )
-            
             if response.status_code == 200:
                 print('Nodes uploaded successfully')
         except:
@@ -448,28 +449,44 @@ def send_telegram():
         return
     
     try:
-        with open(sub_path, 'r') as f:
-            message = f.read()
+        if not os.path.exists(sub_path):
+            print(f'Error: {sub_path} does not exist, skipping TG push.')
+            return
+
+        with open(sub_path, 'r', encoding='utf-8') as f:
+            message = f.read().strip()
         
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         
-        escaped_name = re.sub(r'([_*\[\]()~>#+=|{}.!\-])', r'\\\1', NAME)
+        # HTML 特殊字符转义函数
+        def html_escape(text):
+            return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+        safe_name = html_escape(NAME)
         
-        params = {
+        # 组装更稳定的 HTML 格式，使用 <code> 包裹以支持一键点击复制
+        html_text = f"<b>{safe_name} 节点推送通知</b>\n\n<code>{message}</code>"
+        
+        payload = {
             "chat_id": CHAT_ID,
-            "text": f"**{escaped_name}节点推送通知**\n{message}",
-            "parse_mode": "MarkdownV2"
+            "text": html_text,
+            "parse_mode": "HTML"
         }
         
-        requests.post(url, params=params)
-        print('Telegram message sent successfully')
+        # 增加 10 秒超时设置，防止网络波动导致主进程死锁
+        response = requests.post(url, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            print('Telegram message sent successfully')
+        else:
+            print(f'Telegram API returned error: {response.status_code} - {response.text}')
     except Exception as e:
         print(f'Failed to send Telegram message: {e}')
 
 # Generate links and subscription content
 async def generate_links(argo_domain):
     meta_info = subprocess.run(['curl', '-sm', '5', '-H', 'User-Agent: Mozilla/5.0', 'https://api.ip.sb/geoip'], capture_output=True, text=True)
-    geo_data = json.loads(meta_info.stdout)
+    geo_data = json.loads(meta_info.stdout) if meta_info.returncode == 0 else {}
     country_code = geo_data.get('country_code', 'Unknown')
     isp = geo_data.get('isp', 'Unknown').replace(' ', '_').strip()
     if NAME and NAME.strip():
@@ -480,13 +497,12 @@ async def generate_links(argo_domain):
     time.sleep(2)
     VMESS = {"v": "2", "ps": f"{ISP}", "add": CFIP, "port": CFPORT, "id": UUID, "aid": "0", "scy": "none", "net": "ws", "type": "none", "host": argo_domain, "path": "/vmess-argo?ed=2560", "tls": "tls", "sni": argo_domain, "alpn": "", "fp": "chrome"}
  
-    list_txt = f"""
-vless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=chrome&type=ws&host={argo_domain}&path=%2Fvless-argo%3Fed%3D2560#{ISP}
+    list_txt = f"""vless://{UUID}@{CFIP}:{CFPORT}?encryption=none&security=tls&sni={argo_domain}&fp=chrome&type=ws&host={argo_domain}&path=%2Fvless-argo%3Fed%3D2560#{ISP}
   
 vmess://{ base64.b64encode(json.dumps(VMESS).encode('utf-8')).decode('utf-8')}
 
 trojan://{UUID}@{CFIP}:{CFPORT}?security=tls&sni={argo_domain}&fp=chrome&type=ws&host={argo_domain}&path=%2Ftrojan-argo%3Fed%3D2560#{ISP}
-    """
+"""
     
     with open(os.path.join(FILE_PATH, 'list.txt'), 'w', encoding='utf-8') as list_file:
         list_file.write(list_txt)
@@ -496,7 +512,6 @@ trojan://{UUID}@{CFIP}:{CFPORT}?security=tls&sni={argo_domain}&fp=chrome&type=ws
         sub_file.write(sub_txt)
         
     print(sub_txt)
-    
     print(f"{FILE_PATH}/sub.txt saved successfully")
     
     # Additional actions
@@ -515,7 +530,8 @@ def add_visit_task():
         response = requests.post(
             'https://keep.gvrander.eu.org/add-url',
             json={"url": PROJECT_URL},
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
+            timeout=10
         )
         print('automatic access task added successfully')
     except Exception as e:
@@ -572,11 +588,16 @@ def run_server():
     
 def run_async():
     loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_server()) 
-    
-    while True:
-        time.sleep(3600)
+    async def main_task():
+        await start_server()
+        while True:
+            await asyncio.sleep(3600)
+    try:
+        loop.run_until_complete(main_task())
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        loop.close()
         
 if __name__ == "__main__":
     run_async()
