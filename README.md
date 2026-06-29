@@ -10,6 +10,8 @@
 
 方式三：docker部署，右边的packages中已打包好镜像，镜像地址：ghcr.io/eooce/python:latest 支持镜像部署的平台推荐优先使用镜像
 
+方式四：命令运行，
+运行命令: bash run.sh 
 # 环境变量
 * PaaS 平台设置的环境变量
   | 变量名        | 是否必须 | 默认值 | 备注 |
