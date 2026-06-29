@@ -26,10 +26,10 @@ else
 fi
 
 # 3. 运行 Python 应用（修正了拼写错误 pyhon -> python）
-if [ -f "app1.py" ]; then
-    echo "🏃 正在启动 app1.py..."
+if [ -f "app.py" ]; then
+    echo "🏃 正在启动 app.py..."
     echo "--------------------------------"
-    python app1.py
+    python app.py
 else
     echo "❌ 错误: 未找到 app.py 文件！"
     exit 1
